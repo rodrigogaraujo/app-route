@@ -64,9 +64,8 @@ export function Dashboard() {
           deferredUpdatesInterval: 1000, // minimum interval (in milliseconds) between updates
           // foregroundService is how you get the task to be updated as often as would be if the app was open
           foregroundService: {
-            notificationTitle: 'Using your location',
-            notificationBody:
-              'To turn off, go back to the app and switch something off.',
+            notificationTitle: 'Virginia',
+            notificationBody: 'Para finalizar o percurso abra o aplicativo.',
           },
         });
 
