@@ -1,4 +1,6 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
+import {Alert, Platform} from 'react-native';
+import * as Location from 'expo-location';
 
 import {
   Container,
@@ -16,6 +18,30 @@ import {
 } from './styles';
 
 export function Dashboard() {
+  const [init, setInit] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (init) {
+        let {status} = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert(
+            'ATENÇÃO',
+            'Este aplicativo precisa de permissão para utilização do seu GPS',
+          );
+          return;
+        }
+
+        let location = await Location.getCurrentPositionAsync({});
+        console.log({
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+        });
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [init]);
+
   return (
     <Container>
       <Header>
@@ -30,8 +56,10 @@ export function Dashboard() {
         </UserWrapper>
       </Header>
       <ContentContainer>
-        <ButtonItem>
-          <ButtonText>Iniciar percurso</ButtonText>
+        <ButtonItem onPress={() => setInit(!init)}>
+          <ButtonText>
+            {!init ? 'Iniciar percurso' : 'Pausar percurso'}
+          </ButtonText>
         </ButtonItem>
       </ContentContainer>
       <ContentContainer>
