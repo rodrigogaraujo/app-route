@@ -19,6 +19,7 @@ interface IconPassProps {
 export const Container = styled.View<ContainerProps>`
   width: 100%;
   align-items: center;
+  margin-bottom: ${RFValue(8)}px;
 
   border-bottom-width: 2px;
 
@@ -46,7 +47,6 @@ export const Content = styled.View`
   flex-direction: row;
   padding: 0 ${RFValue(16)}px;
   align-items: center;
-  margin-bottom: ${RFValue(8)}px;
   height: ${RFValue(55)}px;
 `;
 
@@ -66,7 +66,7 @@ export const Icon = styled(SimpleLineIcons)<IconProps>`
 export const IconPassword = styled(SimpleLineIcons)<IconPassProps>`
   margin-right: ${RFValue(32)}px;
   color: ${({theme, passwordView}) =>
-    passwordView ? theme.colors.primary : theme.colors.secondary};
+    passwordView ? theme.colors.text : theme.colors.primary};
 `;
 
 export const ErrorText = styled.Text`

@@ -1,5 +1,4 @@
 import React from 'react';
-import {StatusBar} from 'react-native';
 import {ThemeProvider} from 'styled-components';
 import {
   useFonts,
@@ -29,7 +28,6 @@ export default function App() {
   return (
     <AppProvider>
       <ThemeProvider theme={theme}>
-        <StatusBar barStyle="light-content" />
         <NavigationContainer>
           <Routes />
         </NavigationContainer>

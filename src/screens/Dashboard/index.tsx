@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {Alert, Platform} from 'react-native';
+import {Alert, StatusBar} from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
@@ -93,6 +93,7 @@ export function Dashboard() {
 
   return (
     <Container>
+      <StatusBar barStyle="light-content" />
       <Header>
         <UserWrapper>
           <UserInfo>
