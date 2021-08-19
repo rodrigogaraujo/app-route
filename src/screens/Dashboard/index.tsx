@@ -22,6 +22,17 @@ import api from '../../services/api';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
+interface TaskProps {
+  locations: [
+    {
+      coords: {
+        latitude: string;
+        longitude: string;
+      }
+    }
+  ]
+}
+
 export function Dashboard() {
   const [init, setInit] = useState(false);
   const {signOut, user} = useAuth();
@@ -83,18 +94,22 @@ export function Dashboard() {
     })();
   }, [init]);
 
-  TaskManager.defineTask(LOCATION_TASK_NAME, async ({data, error}) => {
+  TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
+    const { locations} = data as TaskProps;
+
     if (error) {
       console.log('error', error);
       return;
     }
+
     if (data && init) {
-      console.log('data: ', new Date(), data.locations[0].coords);
       // do something with the locations captured in the background
+      console.log('data: ', new Date(), locations[0].coords);
+      
       try {
         await api.post('position', {
-          lat: data.locations[0].coords.latitude,
-          lng: data.locations[0].coords.longitude,
+          lat: locations[0].coords.latitude,
+          lng: locations[0].coords.longitude,
           date: new Date(),
         });
       } catch (er) {
