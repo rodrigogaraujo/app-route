@@ -2,6 +2,8 @@ import React, {useState, useEffect} from 'react';
 import {Alert, StatusBar, TouchableOpacity} from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   Container,
@@ -28,12 +30,13 @@ interface TaskProps {
       coords: {
         latitude: string;
         longitude: string;
-      }
-    }
-  ]
+      };
+    },
+  ];
 }
 
 export function Dashboard() {
+  const [isConected, setIsConected] = useState(false);
   const [init, setInit] = useState(false);
   const {signOut, user} = useAuth();
 
@@ -94,24 +97,52 @@ export function Dashboard() {
     })();
   }, [init]);
 
-  TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
-    const { locations} = data as TaskProps;
+  TaskManager.defineTask(LOCATION_TASK_NAME, async ({data, error}) => {
+    const {locations} = data as TaskProps;
 
     if (error) {
       console.log('error', error);
       return;
     }
 
-    if (data && init) {
+    if (locations && init) {
       // do something with the locations captured in the background
-      console.log('data: ', new Date(), locations[0].coords);
-      
       try {
-        await api.post('position', {
+        const obj = {
           lat: locations[0].coords.latitude,
           lng: locations[0].coords.longitude,
           date: new Date(),
-        });
+        };
+        if (isConected) {
+          const dataStorage = await AsyncStorage.getItem(
+            `@km@virginia@user:${user.id}`,
+          );
+          if (dataStorage) {
+            const itensData = JSON.parse(dataStorage);
+            for (const itemDt of itensData) {
+              await api.post('position', itemDt);
+            }
+            await AsyncStorage.removeItem(`@km@virginia@user:${user.id}`);
+          }
+          await api.post('position', obj);
+        } else {
+          const dataStorage = await AsyncStorage.getItem(
+            `@km@virginia@user:${user.id}`,
+          );
+          if (dataStorage) {
+            const itensData = JSON.parse(dataStorage);
+            const newItens = [...itensData, obj];
+            await AsyncStorage.setItem(
+              `@km@virginia@user:${user.id}`,
+              JSON.stringify(newItens),
+            );
+          } else {
+            await AsyncStorage.setItem(
+              `@km@virginia@user:${user.id}`,
+              JSON.stringify([obj]),
+            );
+          }
+        }
       } catch (er) {
         console.log('er', er);
       }
@@ -124,6 +155,10 @@ export function Dashboard() {
     }
     return name;
   };
+
+  NetInfo.fetch().then(state => {
+    setIsConected(state.isConnected || false);
+  });
 
   return (
     <Container>
@@ -146,6 +181,7 @@ export function Dashboard() {
           onPress={async () => {
             if (init) {
               TaskManager.unregisterAllTasksAsync();
+              await AsyncStorage.removeItem(`@km@virginia@user:${user.id}`);
             }
             setInit(!init);
           }}>

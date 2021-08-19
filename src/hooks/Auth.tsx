@@ -12,6 +12,7 @@ interface UserProps {
   email: string;
   name?: string;
   password: string;
+  id: string;
 }
 interface AuthState {
   token: string;
