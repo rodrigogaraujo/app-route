@@ -11,6 +11,17 @@ export const Container = styled.View`
   margin-bottom: ${getStatusBarHeight() + RFValue(8)}px;
 `;  
 
+export const ContainerIndicator  = styled.View`
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+`;  
+
+export const ActivityIndicator = styled.ActivityIndicator`
+  align-self: center;
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
 export const Logo = styled.Image.attrs({
   source: logo
 })`
@@ -39,7 +50,7 @@ export const ButtonItem = styled.TouchableOpacity`
   padding: ${RFValue(14)}px;
   border-radius: ${RFValue(8)}px;
   justify-content: center;
-  margin-top: auto;
+  margin-top: ${RFValue(14)}px;
 `
 
 export const ButtonText = styled.Text`
