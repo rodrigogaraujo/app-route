@@ -69,9 +69,11 @@ export function Forgot() {
           password={false}
           placeholder="E-mail"
           icon="user"
+          textContentType="emailAddress"
+          keyboardType="email-address"
           onChangeText={e => setEmail(e)}
           value={email}
-          keyboardType="email-address"
+          autoCapitalize="none"
         />
       </Content>
       <ButtonItem onPress={handleRecoverPass}>

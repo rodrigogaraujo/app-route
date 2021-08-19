@@ -39,22 +39,13 @@ export function Dashboard() {
   const [isConected, setIsConected] = useState(false);
   const [init, setInit] = useState(false);
   const {signOut, user} = useAuth();
+  const [latLng, setLatLng] = useState('');
 
   useEffect(() => {
     (async () => {
       if (init) {
         let {status} = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert(
-            'ATENÇÃO',
-            'Este aplicativo precisa de permissão para utilização do seu GPS',
-          );
-          return;
-        }
-
-        let {status: statusBg} =
-          await Location.requestBackgroundPermissionsAsync();
-        if (statusBg !== 'granted') {
           Alert.alert(
             'ATENÇÃO',
             'Este aplicativo precisa de permissão para utilização do seu GPS',
@@ -104,8 +95,8 @@ export function Dashboard() {
       console.log('error', error);
       return;
     }
-
-    if (locations && init) {
+    setInit(true);
+    if (locations) {
       // do something with the locations captured in the background
       try {
         const obj = {
@@ -117,13 +108,14 @@ export function Dashboard() {
           const dataStorage = await AsyncStorage.getItem(
             `@km@virginia@user:${user.id}`,
           );
-          if (dataStorage) {
+          if (dataStorage && dataStorage.length) {
             const itensData = JSON.parse(dataStorage);
             for (const itemDt of itensData) {
               await api.post('position', itemDt);
             }
             await AsyncStorage.removeItem(`@km@virginia@user:${user.id}`);
           }
+          setLatLng(stt => `${stt} - ${obj.lat}/${obj.lng}`);
           await api.post('position', obj);
         } else {
           const dataStorage = await AsyncStorage.getItem(

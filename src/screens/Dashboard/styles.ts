@@ -73,6 +73,13 @@ export const ButtonText = styled.Text`
   font-family: ${({ theme }) => theme.fonts.medium};
 ` 
 
+export const TextTestLat = styled.Text`
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: ${RFValue(18)}px;
+  flex-wrap: wrap;
+  font-family: ${({ theme }) => theme.fonts.medium};
+` 
+
 export const Logo = styled.Image.attrs({
   source: logo
 })`

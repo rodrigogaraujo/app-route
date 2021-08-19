@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {useNavigation} from '@react-navigation/native';
 import {
   StatusBar,
@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import {StackNavigationProp} from '@react-navigation/stack';
+import * as Location from 'expo-location';
 
 import Input from '../../components/Input';
 import {RootStackParamList} from '../../routes/auth.routes';
@@ -57,6 +58,32 @@ export function SignIn() {
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      let resp = await Location.requestBackgroundPermissionsAsync();
+      if (resp.status !== 'granted') {
+        Alert.alert(
+          'ATENÇÃO',
+          'Este aplicativo precisa de permissão para utilização do seu GPS',
+        );
+        return;
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      let respThree = await Location.requestForegroundPermissionsAsync();
+      if (respThree.status !== 'granted') {
+        Alert.alert(
+          'ATENÇÃO',
+          'Este aplicativo precisa de permissão para utilização do seu GPS',
+        );
+        return;
+      }
+    })();
+  }, []);
+
   return loading ? (
     <ContainerIndicator>
       <ActivityIndicator color="#203E9C" />
@@ -78,14 +105,17 @@ export function SignIn() {
               password={false}
               placeholder="E-mail"
               icon="user"
+              textContentType="emailAddress"
+              keyboardType="email-address"
+              autoCapitalize="none"
               onChangeText={e => setEmail(e)}
               value={email}
-              keyboardType="email-address"
             />
             <Input
               password={true}
               placeholder="Senha"
               icon="lock"
+              autoCapitalize="none"
               onChangeText={e => setPassword(e)}
               value={password}
             />
