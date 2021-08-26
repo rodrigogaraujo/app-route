@@ -2,7 +2,12 @@ import React, {useState, useEffect} from 'react';
 import {Alert, StatusBar, TouchableOpacity} from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import NetInfo from '@react-native-community/netinfo';
+import {useNetInfo} from '@react-native-community/netinfo';
+import {
+  SyncDatabaseChangeSet,
+  synchronize,
+  SyncPullArgs,
+} from '@nozbe/watermelondb/sync';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -19,8 +24,11 @@ import {
   ButtonItem,
   Logo,
 } from './styles';
+
 import {useAuth} from '../../hooks/Auth';
 import api from '../../services/api';
+import {database} from '../../database';
+import {PointUser} from '../../database/models/PointUser';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
@@ -39,7 +47,28 @@ export function Dashboard() {
   const [isConected, setIsConected] = useState(false);
   const [init, setInit] = useState(false);
   const {signOut, user} = useAuth();
-  const [latLng, setLatLng] = useState('');
+  const netInfo = useNetInfo();
+
+  async function offlineSynchronize() {
+    try {
+      await synchronize({
+        database,
+        pullChanges: async () => {
+          const resp = await api.get('routes-item-user');
+          return {
+            timestamp: resp.data.latestVersion,
+            changes: [] as unknown as SyncDatabaseChangeSet,
+          };
+        },
+        pushChanges: async ({changes}) => {
+          const routePoints = changes.routeuserpoints;
+          await api.post('sync/position', {changes: routePoints.created});
+        },
+      });
+    } catch (er) {
+      console.log(er);
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -67,7 +96,7 @@ export function Dashboard() {
         //   },
         // );
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.BestForNavigation,
           distanceInterval: 1, // minimum change (in meters) betweens updates
           deferredUpdatesInterval: 1000, // minimum interval (in milliseconds) between updates
           // foregroundService is how you get the task to be updated as often as would be if the app was open
@@ -80,7 +109,7 @@ export function Dashboard() {
         Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME).then(
           value => {
             if (value) {
-              console.log('value', value);
+              // console.log('value', value);
             }
           },
         );
@@ -103,38 +132,59 @@ export function Dashboard() {
           lat: locations[0].coords.latitude,
           lng: locations[0].coords.longitude,
           date: new Date(),
+          offline: false,
         };
         if (isConected) {
-          const dataStorage = await AsyncStorage.getItem(
-            `@km@virginia@user:${user.id}`,
-          );
-          if (dataStorage && dataStorage.length) {
-            const itensData = JSON.parse(dataStorage);
-            for (const itemDt of itensData) {
-              await api.post('position', itemDt);
-            }
-            await AsyncStorage.removeItem(`@km@virginia@user:${user.id}`);
-          }
-          setLatLng(stt => `${stt} - ${obj.lat}/${obj.lng}`);
+          // const dataStorage = await AsyncStorage.getItem(
+          //   `@km@virginia@user:${user.id}`,
+          // );
+          // if (dataStorage) {
+          //   const itensData = JSON.parse(dataStorage);
+          //   for (const itemDt of itensData) {
+          //     await api.post('position', itemDt);
+          //   }
+          //   await AsyncStorage.removeItem(`@km@virginia@user:${user.id}`);
+          // }
+          // setLatLng(stt => `${stt} - ${obj.lat}/${obj.lng}`);
+          await offlineSynchronize();
           await api.post('position', obj);
         } else {
-          const dataStorage = await AsyncStorage.getItem(
-            `@km@virginia@user:${user.id}`,
-          );
-          if (dataStorage) {
-            const itensData = JSON.parse(dataStorage);
-            const newItens = [...itensData, obj];
-            await AsyncStorage.setItem(
-              `@km@virginia@user:${user.id}`,
-              JSON.stringify(newItens),
-            );
-          } else {
-            await AsyncStorage.setItem(
-              `@km@virginia@user:${user.id}`,
-              JSON.stringify([obj]),
-            );
-          }
+          const routeUser = database.get<PointUser>('routeuserpoints');
+          await database.write(async () => {
+            const responseDt = await routeUser.create(newUser => {
+              newUser.lat = String(obj.lat);
+              newUser.lng = String(obj.lng);
+              newUser.date = obj.date.getTime();
+            });
+          });
         }
+        // } else {
+        //   const routeUser = database.get<PointUser>('routeuserpoints');
+        //   await database.write(async () => {
+        //     await routeUser.create(newUser => {
+        //       newUser.lat = obj.lat;
+        //       newUser.lng = obj.lng;
+        //       newUser.date = obj.date.getTime();
+        //     });
+        //   });
+
+        // const dataStorage = await AsyncStorage.getItem(
+        //   `@km@virginia@user:${user.id}`,
+        // );
+        // if (dataStorage) {
+        //   const itensData = JSON.parse(dataStorage);
+        //   const newItens = [...itensData, {...obj, offline: true}];
+        //   await AsyncStorage.setItem(
+        //     `@km@virginia@user:${user.id}`,
+        //     JSON.stringify(newItens),
+        //   );
+        // } else {
+        //   await AsyncStorage.setItem(
+        //     `@km@virginia@user:${user.id}`,
+        //     JSON.stringify([obj]),
+        //   );
+        // }
+        // }
       } catch (er) {
         console.log('er', er);
       }
@@ -148,9 +198,13 @@ export function Dashboard() {
     return name;
   };
 
-  NetInfo.fetch().then(state => {
-    setIsConected(state.isConnected || false);
-  });
+  useEffect(() => {
+    if (netInfo.isConnected) {
+      setIsConected(netInfo.isConnected);
+    } else {
+      setIsConected(false);
+    }
+  }, [netInfo.isConnected]);
 
   return (
     <Container>

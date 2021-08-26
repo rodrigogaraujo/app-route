@@ -15,7 +15,7 @@ const Routes = () => {
     );
   }
 
-  return user ? <AppRoutes /> : <AuthRoutes />;
+  return user && user.token ? <AppRoutes /> : <AuthRoutes />;
 };
 
 export default Routes;

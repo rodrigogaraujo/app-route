@@ -5,17 +5,19 @@ import React, {
   useContext,
   useEffect,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import api from '../services/api';
+import {database} from '../database';
+import {User as Modeluser} from '../database/models/User';
 
 interface UserProps {
   email: string;
   name?: string;
-  password: string;
+  password?: string;
   id: string;
+  token: string;
 }
 interface AuthState {
-  token: string;
   user: UserProps;
 }
 
@@ -48,41 +50,57 @@ export const AuthProvider: React.FC = ({children}: any) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadStoragedData(): Promise<void> {
-      const [token, user] = await AsyncStorage.multiGet([
-        '@km-ph:token',
-        '@km-ph:user',
-      ]);
+    async function loadUserData(): Promise<void> {
+      const userCollection = database.get<Modeluser>('users');
+      const response = await userCollection.query().fetch();
 
-      if (token[1] && user[1]) {
-        setData({token: token[1], user: JSON.parse(user[1])});
-        api.defaults.headers.authorization = `Bearer ${token[1]}`;
+      if (response.length > 0) {
+        const userData = response[0]._raw as unknown as UserProps;
+        api.defaults.headers.authorization = `Bearer ${userData.token}`;
+        setData({user: userData});
       }
 
       setLoading(false);
     }
 
-    loadStoragedData();
+    loadUserData();
   }, []);
 
   const signOut = useCallback(async () => {
-    await AsyncStorage.multiRemove(['@km-ph:token', '@km-ph:user']);
-    setData({} as AuthState);
+    try {
+      await database.write(async () => {
+        const userCollection = database.get<Modeluser>('users');
+        const userSelected = await userCollection.find(data.user.id);
+        await userSelected.destroyPermanently();
+        setData({} as AuthState);
+      });
+    } catch (er) {
+      throw new Error(er);
+    }
   }, []);
 
   const signIn = useCallback(async ({email, password}) => {
-    const response = await api.post('/sessions', {
-      email,
-      password,
-    });
-    const {token, user} = response.data;
-    api.defaults.headers.authorization = `Bearer ${token.token}`;
-    await AsyncStorage.multiSet([
-      ['@km-ph:token', token.token],
-      ['@km-ph:user', JSON.stringify(user)],
-    ]);
-
-    setData({token, user});
+    try {
+      const response = await api.post('/sessions', {
+        email,
+        password,
+      });
+      const {token, user} = response.data;
+      api.defaults.headers.authorization = `Bearer ${token.token}`;
+      const userCollection = database.get<Modeluser>('users');
+      await database.write(async () => {
+        const resp = await userCollection.create(newUser => {
+          newUser.user_id = user.id;
+          newUser.name = user.name;
+          newUser.email = user.email;
+          newUser.token = token.token;
+        });
+        const userData = resp._raw as unknown as UserProps;
+        setData({user: userData});
+      });
+    } catch (er) {
+      throw new Error(er);
+    }
   }, []);
 
   return (
